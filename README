@@ -1,0 +1,30 @@
+
+	Router-ul, dupa ce porneste (make run_router0/1), citeste tabela de rutare si completeaza
+arborele binar de cautare folosit pentru a gasi ruta pe care trebuie sa trimita pachetele
+venite, si initializeaza coada de pachete.
+	
+	Intr-un loop, router-ul primeste un pachet si verifica daca pachetul este de tip ARP(0x0806)
+sau IPv4(0x0800). 
+	
+	Daca tipul este ARP, router-ul verifica daca este un request(1) sau reply(2) si daca pachetul
+ii este destinat lui(are acelasi ip cu campul target ip din header-ul ARP). Daca mesajul este de
+tip request acesta inverseaza campurile pentru sender si destination si completeaza cu ip-ul si
+destinatia interfetei pe care a venit pachetul, dupa care il trimite inapoi. Daca mesajul este de 
+tip reply, router-ul salveaza in cache ip-ul si mac-ul sender-ului, dupa care, daca exista
+pachete in asteptare, completeaza mac-ul destinatie si il trimite.
+
+	Daca tipul este IPv4, router-ul verifica intai datele nu s-au corupt. Apoi, daca destinatia
+pachetului primit este chiar router-ul si pachetul este un echo request(8), acesta trimite un
+reply(0) catre sursa care a trimis pachetul. Daca destinatia pachetului nu este router-ul, acesta
+cauta ruta cea mai scurta pentru a ajunge la ip-ul destinatie. Daca ruta nu exista router-ul 
+trimite sender-ului un pachet destination_unreachable(3). Daca ruta exista, se verifica ca ttl-ul
+este mai mare decat 1, in caz contrar router-ul trimite sursei un pachet timeout(11). Daca exista
+ruta si pachetul are ttl mai mare decat 1, se decrementeaza ttl-ul cu 1, se calculeaza noul
+checksum si se cauta mac-ul urmatorului hop in tabele de mac-uri. Daca acesta nu exista, pachetul
+se pune intr-o coada si router-ul trimite un pachet ARP pe broadcast pentru a afla mac-ul
+urmatorului hop. Cand reply-ul ajunge se face procedura pentru ARP reply(scrisa mai sus). Daca mac-ul exista deja in cache se completeaza noua destinatie in header-ul ethernet si se trimite pachetul.
+
+	De fiecare data cand router-ul trimite un pachet acesta seteaza mac-ul si ip-u sursei ca
+fiind mac-ul si ip-ul interfetei pe care este trimis pachetul.
+
+	Cautarea in tabela de rutare este facuta cu un trie, pentru a afla cel mai lung prefix.
